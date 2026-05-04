@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sales & Revenue Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+      background: #f4f6f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+    .kpis {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      width: 30%;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    canvas {
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      background: white;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Sales & Revenue Dashboard</h1>
+
+  <!-- Upload -->
+  <input type="file" id="fileInput">
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="card">
+      <h3>Total Sales</h3>
+      <p id="totalSales">0</p>
+    </div>
+    <div class="card">
+      <h3>Total Revenue</h3>
+      <p id="totalRevenue">0</p>
+    </div>
+    <div class="card">
+      <h3>Avg Sales</h3>
+      <p id="avgSales">0</p>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <canvas id="barChart"></canvas>
+  <canvas id="lineChart"></canvas>
+
+  <!-- Table -->
+  <h2>Top Products</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Revenue</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<script>
+let data = [];
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(event) {
+    const text = event.target.result;
+    parseCSV(text);
+  };
+
+  reader.readAsText(file);
+});
+
+function parseCSV(text) {
+  const rows = text.split('\n').slice(1);
+  data = rows.map(row => {
+    const cols = row.split(',');
+    return {
+      product: cols[0],
+      category: cols[1],
+      quantity: +cols[2],
+      price: +cols[3],
+      date: cols[4],
+      revenue: +cols[2] * +cols[3]
+    };
+  });
+
+  updateDashboard();
+}
+
+function updateDashboard() {
+  const totalSales = data.reduce((sum, d) => sum + d.quantity, 0);
+  const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
+  const avgSales = totalSales / data.length;
+
+  document.getElementById('totalSales').innerText = totalSales;
+  document.getElementById('totalRevenue').innerText = totalRevenue.toFixed(2);
+  document.getElementById('avgSales').innerText = avgSales.toFixed(2);
+
+  const productMap = {};
+  data.forEach(d => {
+    productMap[d.product] = (productMap[d.product] || 0) + d.revenue;
+  });
+
+  const labels = Object.keys(productMap);
+  const values = Object.values(productMap);
+
+  renderBarChart(labels, values);
+  renderLineChart(labels, values);
+  renderTable(productMap);
+}
+
+function renderBarChart(labels, values) {
+  new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Revenue',
+        data: values
+      }]
+    }
+  });
+}
+
+function renderLineChart(labels, values) {
+  new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Revenue Trend',
+        data: values
+      }]
+    }
+  });
+}
+
+function renderTable(productMap) {
+  const table = document.getElementById('tableBody');
+  table.innerHTML = '';
+
+  Object.entries(productMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .forEach(([product, revenue]) => {
+      table.innerHTML += `
+        <tr>
+          <td>${product}</td>
+          <td>${revenue.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+}
+</script>
+
+</body>
+</html>
